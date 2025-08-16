@@ -1,72 +1,121 @@
-import argparse
+#!/usr/bin/env python3
 
-def merge_files(files, unique_only):
+import argparse
+import re
+
+ASCII_ART = r'''
+_ _  _ ____ ____ ____ ____ ____ ____ ____ ____
+| |\ | |___ |  | [__  |___ |    |___ |  | |__/
+| | \| |    |__| ___] |___ |___ |    |__| |  \
+'''
+
+def write_output(lines, output_file):
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as out:
+            for line in lines:
+                out.write(line + "\n")
+    else:
+        for line in lines:
+            print(line)
+
+def merge_files(files, unique_only, output_file):
     seen = set()
+    result = []
     for fname in files:
         with open(fname, "r", encoding="utf-8", errors="ignore") as f:
             for line in f:
-                line = line.rstrip("\\n")
-                if not unique_only:
-                    print(line)
-                elif line not in seen:
+                line = line.rstrip("\n")
+                if not unique_only or line not in seen:
+                    result.append(line)
                     seen.add(line)
-                    print(line)
+    write_output(result, output_file)
 
-def delete_entries(from_file, delete_file):
+def delete_entries(from_file, delete_file, output_file):
     delete_set = set()
+    result = []
     with open(delete_file, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            delete_set.add(line.rstrip("\\n"))
+            delete_set.add(line.rstrip("\n"))
     with open(from_file, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            line = line.rstrip("\\n")
+            line = line.rstrip("\n")
             if line not in delete_set:
-                print(line)
+                result.append(line)
+    write_output(result, output_file)
 
-def filter_length(file, min_len, max_len):
+def filter_length(file, min_len, max_len, output_file):
+    result = []
     with open(file, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            line = line.rstrip("\\n")
+            line = line.rstrip("\n")
             if min_len <= len(line) <= max_len:
-                print(line)
+                result.append(line)
+    write_output(result, output_file)
+
+def filter_contains(file, substring, output_file):
+    result = []
+    with open(file, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if substring in line:
+                result.append(line)
+    write_output(result, output_file)
+
+def filter_regex(file, pattern, output_file):
+    regex = re.compile(pattern)
+    result = []
+    with open(file, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if regex.search(line):
+                result.append(line)
+    write_output(result, output_file)
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Wordlist Toolkit - Swiss Army Knife für Wordlists"
-    )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    print(ASCII_ART)
+    parser = argparse.ArgumentParser(description="Wordlist Swiss Army Knife")
+    subparsers = parser.add_subparsers(dest="command")                                     
 
-    # Merge
-    merge_parser = subparsers.add_parser("merge", help="Wordlists zusammenfügen")
-    merge_parser.add_argument("files", nargs="+", help="Input-Dateien")
-    merge_parser.add_argument("--unique", action="store_true", help="Nur eindeutige Einträge behalten")
+    merge_parser = subparsers.add_parser("merge", help="Merge multiple wordlists")
+    merge_parser.add_argument("files", nargs="+")
+    merge_parser.add_argument("--unique", action="store_true", help="Remove duplicates")
+    merge_parser.add_argument("--output", help="Output file (default: stdout)")
 
-    # Delete
-    delete_parser = subparsers.add_parser("delete", help="Einträge aus Datei löschen")
-    delete_parser.add_argument("from_file", help="Zieldatei (die große)")
-    delete_parser.add_argument("delete_file", help="Datei mit zu entfernenden Wörtern")
+    delete_parser = subparsers.add_parser("delete", help="Remove entries from one list based on another")
+    delete_parser.add_argument("from_file")
+    delete_parser.add_argument("delete_file")
+    delete_parser.add_argument("--output", help="Output file (default: stdout)")
 
-    # Filter nach Länge
-    filter_parser = subparsers.add_parser("filter-length", help="Nach Wortlänge filtern")
-    filter_parser.add_argument("file", help="Input-Datei")
-    filter_parser.add_argument("min_len", type=int, help="Minimale Länge")
-    filter_parser.add_argument("max_len", type=int, help="Maximale Länge")
+    filter_len_parser = subparsers.add_parser("filter-length", help="Filter by word length")
+    filter_len_parser.add_argument("file")
+    filter_len_parser.add_argument("min_len", type=int)
+    filter_len_parser.add_argument("max_len", type=int)
+    filter_len_parser.add_argument("--output", help="Output file (default: stdout)")
+
+    contains_parser = subparsers.add_parser("contains", help="Filter by substring")
+    contains_parser.add_argument("file")
+    contains_parser.add_argument("substring")
+    contains_parser.add_argument("--output", help="Output file (default: stdout)")
+
+    regex_parser = subparsers.add_parser("regex", help="Filter by regex pattern")
+    regex_parser.add_argument("file")
+    regex_parser.add_argument("pattern")
+    regex_parser.add_argument("--output", help="Output file (default: stdout)")
 
     args = parser.parse_args()
 
     if args.command == "merge":
-        merge_files(args.files, args.unique)
+        merge_files(args.files, args.unique, args.output)
     elif args.command == "delete":
-        delete_entries(args.from_file, args.delete_file)
+        delete_entries(args.from_file, args.delete_file, args.output)
     elif args.command == "filter-length":
-        filter_length(args.file, args.min_len, args.max_len)
+        filter_length(args.file, args.min_len, args.max_len, args.output)
+    elif args.command == "contains":
+        filter_contains(args.file, args.substring, args.output)
+    elif args.command == "regex":
+        filter_regex(args.file, args.pattern, args.output)
+    else:
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
-"""
-
-# Speichern als Datei
-with open("/mnt/data/wltool.py", "w") as f:
-    f.write(code)
-
-"/mnt/data/wltool.py"

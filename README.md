@@ -35,11 +35,10 @@ WordCrunch addresses common challenges in security testing and research: efficie
 ### Setup
 
 1. **Download WordCrunch**:
-   ```bash
-   wget https://github.com/yourusername/wordcrunch/raw/main/wordcrunch.py
-   # or
-   curl -O https://github.com/yourusername/wordcrunch/raw/main/wordcrunch.py
-   ```
+```bash
+  git clone https://github.com/SilverHaze99/WordCrunch
+  cd WordCrunch
+```
 
 2. **Make executable**:
    ```bash
